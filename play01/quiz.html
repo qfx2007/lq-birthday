@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 答题闯关</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#FFF8E7;--text:#1a1a1a;
+  --topbar-bg:#fff;--topbar-border:#000;
+  --card-bg:#FF6B9D;--card-border:#000;
+  --opt-bg:#fff;--opt-border:#000;--opt-text:#000;
+  --modal-bg:#FFD700;--modal-border:#000;
+  --progress-bg:#fff;--progress-border:#000;
+}
+[data-theme="dark"]{
+  --bg:#0d0518;--text:#f0f0f0;
+  --topbar-bg:#1a0a2e;--topbar-border:#fff;
+  --card-bg:#2a1a4e;--card-border:#FFD700;
+  --opt-bg:#1a0a2e;--opt-border:#FFD700;--opt-text:#f0f0f0;
+  --modal-bg:#2a1a4e;--modal-border:#FFD700;
+  --progress-bg:#1a0a2e;--progress-border:#FFD700;
+}
+body{
+  font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+  min-height:100vh;background:var(--bg);color:var(--text);
+  transition:background 0.5s,color 0.3s;overflow-x:hidden;
+}
+#starCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;display:none}
+[data-theme="dark"] #starCanvas{display:block}
+.top-bar{
+  position:fixed;top:0;left:0;right:0;height:58px;
+  background:var(--topbar-bg);border-bottom:3px solid var(--topbar-border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 14px;z-index:100;transition:background 0.4s,border-color 0.4s;
+}
+.top-left{display:flex;align-items:center;gap:8px}
+.back-btn{
+  background:#FF3B3B;color:#fff;border:3px solid #000;
+  border-radius:12px;padding:7px 14px;font-size:13px;font-weight:800;
+  cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:4px;
+  box-shadow:3px 3px 0 #000;transition:transform 0.15s,box-shadow 0.15s;
+}
+.back-btn:hover{transform:translate(-2px,-2px);box-shadow:5px 5px 0 #000}
+.top-right{display:flex;align-items:center;gap:8px}
+.score-badge{
+  position:relative;background:#FFD700;border:3px solid #000;
+  border-radius:22px;padding:6px 12px 6px 30px;
+  font-weight:800;font-size:14px;color:#000;
+  box-shadow:3px 3px 0 #000;display:flex;align-items:center;gap:3px;
+}
+.score-badge::before{content:"⭐";position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:13px}
+.score-plus{
+  position:absolute;top:-8px;right:-8px;
+  width:20px;height:20px;
+  background:#fff;border:2px solid #000;border-radius:50%;
+  font-size:14px;font-weight:bold;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:2px 2px 0 #000;transition:transform 0.2s;line-height:1;
+  z-index:2;
+}
+.score-plus:hover{transform:scale(1.15) rotate(90deg)}
+/* 进度条 */
+.progress-wrap{
+  margin-top:72px;margin-bottom:16px;padding:0 20px;
+  max-width:520px;width:100%;
+}
+.progress-track{
+  height:14px;background:var(--progress-bg);
+  border:3px solid var(--progress-border);border-radius:10px;
+  overflow:hidden;transition:background 0.4s,border-color 0.4s;
+}
+.progress-fill{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,#FFD700,#FF6B9D,#FF3B3B);
+  border-radius:8px;transition:width 0.5s ease;
+}
+.progress-text{
+  text-align:center;margin-top:6px;font-size:13px;font-weight:700;
+  color:var(--text);
+}
+/* 主内容区 */
+.card-container{
+  max-width:520px;margin:0 auto;padding:0 20px 60px;
+  display:flex;flex-direction:column;align-items:center;
+  position:relative;z-index:1;
+}
+/* 答题卡片 */
+.quiz-card{
+  width:100%;background:#FF6B9D;border:5px solid #000;
+  border-radius:24px;padding:32px 28px 28px;box-shadow:10px 10px 0 #000;
+  display:flex;flex-direction:column;transition:all 0.4s ease;
+  position:relative;
+}
+.quiz-card::before{
+  content:"";position:absolute;top:-10px;right:-10px;
+  width:40px;height:40px;background:#FFD700;
+  border:3px solid #000;border-radius:50%;z-index:1;
+}
+.quiz-card::after{
+  content:"";position:absolute;bottom:-8px;left:-8px;
+  width:30px;height:30px;background:#0047BB;
+  border:3px solid #000;border-radius:6px;transform:rotate(15deg);z-index:1;
+}
+.quiz-card.yellow{background:#FFD700}
+.quiz-card.red{background:#FF3B3B}
+.quiz-card.blue{background:#0047BB}
+.quiz-card.teal{background:#00B4D8}
+.question{
+  font-size:1.35rem;font-weight:900;color:#000;
+  margin-bottom:24px;line-height:1.5;
+  text-shadow:1px 1px 0 rgba(255,255,255,0.3);
+  padding-right:44px;
+}
+.options{display:flex;flex-direction:column;gap:12px}
+.option{
+  background:var(--opt-bg);border:3px solid var(--opt-border);
+  border-radius:14px;padding:16px 18px;font-size:1.05rem;font-weight:700;
+  color:var(--opt-text);cursor:pointer;text-align:left;
+  box-shadow:4px 4px 0 #000;transition:all 0.15s;font-family:inherit;
+}
+.option:hover:not(:disabled){transform:translate(-3px,-3px);box-shadow:6px 6px 0 #000}
+.option:active:not(:disabled){transform:translate(0,0);box-shadow:2px 2px 0 #000}
+.option.correct{background:#9ACD32!important;border-color:#000!important;color:#000!important}
+.option.wrong{background:#FF6B6B!important;border-color:#000!important;color:#fff!important}
+[data-theme="dark"] .option{color:#f0f0f0!important}
+[data-theme="dark"] .option.correct{color:#000!important}
+/* 下一题箭头按钮 */
+.next-btn{
+  position:absolute;top:-12px;right:-12px;
+  width:40px;height:40px;
+  background:#FFD700;border:3px solid #000;border-radius:50%;
+  font-size:18px;font-weight:bold;color:#000;
+  cursor:pointer;display:none;align-items:center;justify-content:center;
+  box-shadow:3px 3px 0 #000;transition:transform 0.2s,box-shadow 0.2s;
+  z-index:10;
+}
+.next-btn:hover{transform:scale(1.15);box-shadow:5px 5px 0 #000}
+.next-btn.show{display:flex}
+/* 输入框（Q5） */
+.q5-input{
+  width:100%;background:var(--opt-bg);border:3px solid var(--opt-border);
+  border-radius:14px;padding:16px 18px;font-size:1rem;font-weight:700;
+  color:var(--opt-text);box-shadow:4px 4px 0 #000;
+  font-family:inherit;resize:none;outline:none;min-height:80px;
+  transition:background 0.4s,border-color 0.4s,color 0.3s;
+}
+.q5-submit{
+  margin-top:12px;background:#FF3B3B;color:#fff;border:3px solid #000;
+  border-radius:14px;padding:12px 24px;font-size:1rem;font-weight:800;
+  cursor:pointer;box-shadow:4px 4px 0 #000;transition:transform 0.15s;
+  font-family:inherit;align-self:flex-start;
+}
+.q5-submit:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 #000}
+.q5-submit:active{transform:translate(0,0);box-shadow:2px 2px 0 #000}
+/* 底部提示 */
+.footer-hint{
+  text-align:center;margin-top:20px;font-size:13px;font-weight:700;
+  color:var(--text);opacity:0.6;
+}
+/* 卡片动画 */
+.quiz-card.enter{animation:cardEnter 0.4s ease forwards}
+.quiz-card.exit{animation:cardExit 0.3s ease forwards}
+@keyframes cardEnter{from{opacity:0;transform:translateX(60px) rotate(3deg) scale(0.95)}to{opacity:1;transform:translateX(0) rotate(0deg) scale(1)}}
+@keyframes cardExit{from{opacity:1;transform:translateX(0) rotate(0deg)}to{opacity:0;transform:translateX(-60px) rotate(-3deg) scale(0.95)}}
+/* 反馈弹窗 */
+.feedback-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.55);
+  display:flex;align-items:center;justify-content:center;
+  z-index:200;opacity:0;visibility:hidden;transition:all 0.3s;
+}
+.feedback-overlay.active{opacity:1;visibility:visible}
+.feedback-box{
+  background:#FFD700;border:4px solid #000;border-radius:24px;
+  padding:32px 28px;box-shadow:10px 10px 0 #000;
+  max-width:360px;width:90%;position:relative;
+  animation:popIn 0.35s ease;
+}
+@keyframes popIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
+.feedback-close{
+  position:absolute;top:-10px;right:-10px;
+  width:32px;height:32px;background:#FF3B3B;border:3px solid #000;
+  border-radius:50%;font-size:16px;font-weight:bold;color:#fff;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:2px 2px 0 #000;transition:transform 0.2s;z-index:5;
+}
+.feedback-close:hover{transform:scale(1.1)}
+.feedback-points{
+  text-align:center;font-size:1.8rem;font-weight:900;
+  color:#000;margin-bottom:16px;
+}
+.feedback-message{
+  font-size:0.95rem;line-height:1.8;color:#000;
+  white-space:pre-wrap;
+}
+/* 成功弹窗 */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.55);
+  display:flex;align-items:center;justify-content:center;
+  z-index:200;opacity:0;visibility:hidden;transition:all 0.3s;
+}
+.modal-overlay.active{opacity:1;visibility:visible}
+.modal-box{
+  background:#FFD700;border:4px solid #000;border-radius:24px;
+  padding:32px;text-align:center;box-shadow:10px 10px 0 #000;
+  max-width:360px;width:90%;animation:popIn 0.35s ease;
+}
+.modal-box h2{font-size:1.5rem;font-weight:900;margin-bottom:12px;color:#000}
+.modal-box p{font-size:0.95rem;line-height:1.7;margin-bottom:20px;color:#333}
+.btn{
+  border:none;border-radius:14px;padding:12px 22px;
+  font-size:1rem;font-weight:700;cursor:pointer;
+  transition:all 0.2s;box-shadow:3px 3px 0 #000;font-family:inherit;
+}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:5px 5px 0 #000}
+.btn:active{transform:translate(0,0);box-shadow:1px 1px 0 #000}
+.btn-primary{background:#FF3B3B;color:#fff}
+/* Confetti */
+#confettiCanvas{position:fixed;inset:0;z-index:300;pointer-events:none;display:none}
+/* 移动端适配 */
+@media(max-width:480px){
+  .top-bar{height:52px;padding:0 10px}
+  .back-btn{padding:6px 10px;font-size:12px}
+  .score-badge{padding:5px 10px 5px 26px;font-size:13px}
+  .score-plus{width:18px;height:18px;font-size:12px;top:-7px;right:-7px}
+  .progress-wrap{margin-top:66px;padding:0 12px}
+  .progress-track{height:12px}
+  .card-container{padding:0 12px 100px}
+  .quiz-card{padding:24px 20px 20px;border-radius:20px;border-width:4px}
+  .question{font-size:1.15rem;margin-bottom:18px;padding-right:36px}
+  .option{padding:14px 16px;font-size:0.95rem;border-radius:12px}
+  .next-btn{width:36px;height:36px;font-size:16px;top:-10px;right:-10px}
+  .feedback-box{padding:24px 20px}
+  .feedback-points{font-size:1.5rem}
+  .modal-box{padding:24px;border-radius:20px}
+}
+</style>
+</head>
+<body>
+<script>(function(){if(localStorage.getItem("birthday-theme")==="dark")document.documentElement.setAttribute("data-theme","dark");})();</script>
+<canvas id="starCanvas"></canvas>
+<canvas id="confettiCanvas"></canvas>
+
+<!-- 顶部导航栏 -->
+<div class="top-bar">
+  <div class="top-left">
+    <a href="index.html" class="back-btn">← 返回首页</a>
+  </div>
+  <div class="top-right">
+    <div class="score-badge" id="score-badge">
+      <span id="score-display">0</span>
+      <span class="score-plus" id="score-plus" title="去首页赚积分">+</span>
+    </div>
+  </div>
+</div>
+
+<!-- 进度条 -->
+<div class="progress-wrap">
+  <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  <div class="progress-text" id="progress-text">第 0 / 5 题</div>
+</div>
+
+<!-- 答题卡片区域 -->
+<div class="card-container">
+  <div class="quiz-card yellow enter" id="quiz-card">
+    <button class="next-btn" id="next-btn" title="下一题">➜</button>
+    <div class="question" id="question-text"></div>
+    <div class="options" id="options-container"></div>
+  </div>
+  <!-- 底部提示 -->
+  <div class="footer-hint" id="footer-hint">回答一题最高 20 分，满分 100 分</div>
+</div>
+
+<!-- 反馈弹窗 -->
+<div class="feedback-overlay" id="feedback-modal">
+  <div class="feedback-box">
+    <button class="feedback-close" id="feedback-close">✕</button>
+    <div class="feedback-points" id="feedback-points"></div>
+    <div class="feedback-message" id="feedback-message"></div>
+  </div>
+</div>
+
+<!-- 闯关成功弹窗 -->
+<div class="modal-overlay" id="success-modal">
+  <div class="modal-box">
+    <h2>🎉 闯关成功！</h2>
+    <p id="success-text">太棒了！全部题目都答完啦～<br>快去首页解锁你的生日邮件吧！</p>
+    <a href="index.html" class="btn btn-primary">返回首页 🏠</a>
+  </div>
+</div>
+
+<script>
+/* ========== 题目数据（可修改） ========== */
+var QUESTIONS = [
+  {
+    q: "如果我惹你生气了，但是我没有察觉到，你后面怎么样才会消消气？",
+    opts: [
+      "我做了一件让你很开心的事情",
+      "我给你打电话，然后说着说着其他事你就不生气了",
+      "你后面主动跟我说了你生气的点，然后我们俩说开了"
+    ],
+    messages: [
+      ["+19：[我说白了，以咱俩的默契程度，是这个的话我感觉一辈子都送不准，所以我要偷偷滥用职权给你减一分！]"],
+      ["+20：[那我将时不时给闺蜜打电话试探一番。]"],
+      ["+20：[快选这个快选这个！快跟我讲，因为俺真的有时候注意不到。]"]
+    ]
+  },
+  {
+    q: "什么样的礼物你会更喜欢？",
+    opts: [
+      "心里面想买的然后对方刚好送了的",
+      "实用好用的",
+      "浪漫漂亮的"
+    ],
+    messages: [
+      ["+19：[我说白了，以咱俩的默契程度，是这个的话我感觉一辈子都送不准，所以我要偷偷滥用职权给你减一分！]"],
+      ["+20：[叮叮当！小芳闪亮登场！我买的肯定是实用的，不觉得你就完蛋了。]"],
+      ["+20：[真的假的闺蜜选这个!我将偷偷记住。]"]
+    ]
+  },
+  {
+    q: "你遇到不开心，你会怎么做？",
+    opts: [
+      "看情况看心情",
+      "不想搭理任何人、自己找点事情放松放松",
+      "和亲近的人倾诉"
+    ],
+    messages: [
+      ["+20：[满分满分！其实这个没有正确答案，我的意思是只要最终的结果是你开心起来了、过程就不重要，不过闺蜜在外面不要偷偷难过哦。]"],
+      ["+20：[嗯嗯这个也算对的！自己调节情绪也很棒～]"],
+      ["+20：[没错！有我在，随时可以倾诉哦 💕]"]
+    ]
+  },
+  {
+    q: "你觉得一段长久的关系最重要的是？",
+    opts: [
+      "互相包容，允许彼此不一样",
+      "还是要经常见面聊天，保持联系",
+      "基础三观大致契合，想法同频"
+    ],
+    messages: [
+      ["+20：[没错，这个简直说的就是我们！满分满分！]"],
+      ["+20：[聊天✓，见面✗，等后面你有时间了我就去找你玩嘿嘿]"],
+      ["+20：[这个我觉得我们应该是符合的，意满离中。]"]
+    ]
+  },
+  {
+    q: "如果可以，你最想和好朋友（当然这里肯定是闺蜜我啦）做什么事情？",
+    opts: null,
+    messages: null,
+    isInput: true
+  }
+];
+/* 第5题固定得分和留言 */
+var Q5_SCORE = 20;
+var Q5_MESSAGE = "闺蜜，你别是填点咱俩做不到的事情、快点偷偷告诉我你填了啥！";
+
+var CARD_COLORS = ["yellow","red","blue","teal"];
+
+/* ========== 状态 ========== */
+var scoreCents = parseInt(localStorage.getItem("birthday-score-cents") || "0");
+var currentQ = 0;
+var animating = false;
+var lastSelectedScore = 0;
+
+/* ========== DOM ========== */
+var scoreDisplay = document.getElementById("score-display");
+var scorePlus = document.getElementById("score-plus");
+var progressFill = document.getElementById("progress-fill");
+var progressText = document.getElementById("progress-text");
+var quizCard = document.getElementById("quiz-card");
+var questionText = document.getElementById("question-text");
+var optionsContainer = document.getElementById("options-container");
+var nextBtn = document.getElementById("next-btn");
+var footerHint = document.getElementById("footer-hint");
+var feedbackModal = document.getElementById("feedback-modal");
+var feedbackPoints = document.getElementById("feedback-points");
+var feedbackMessage = document.getElementById("feedback-message");
+var feedbackClose = document.getElementById("feedback-close");
+var successModal = document.getElementById("success-modal");
+var confettiCanvas = document.getElementById("confettiCanvas");
+var starCanvas = document.getElementById("starCanvas");
+
+updateScore();
+showQuestion();
+startStarCanvas();
+
+/* ========== 更新积分显示 ========== */
+function updateScore() {
+  scoreDisplay.textContent = scoreCents / 10;
+}
+
+/* ========== 显示题目 ========== */
+function showQuestion() {
+  if (currentQ >= QUESTIONS.length) {
+    showSuccess();
+    return;
+  }
+  var q = QUESTIONS[currentQ];
+  animating = false;
+  lastSelectedScore = 0;
+  nextBtn.classList.remove("show");
+
+  progressFill.style.width = ((currentQ / QUESTIONS.length) * 100) + "%";
+  progressText.textContent = "第 " + (currentQ + 1) + " / " + QUESTIONS.length + " 题";
+
+  quizCard.classList.remove("enter");
+  quizCard.classList.add("exit");
+
+  setTimeout(function() {
+    quizCard.classList.remove("exit");
+    var colorIdx = currentQ % CARD_COLORS.length;
+    quizCard.className = "quiz-card " + CARD_COLORS[colorIdx];
+    questionText.textContent = q.q;
+    optionsContainer.innerHTML = "";
+
+    if (q.isInput) {
+      /* 第5题：文本输入框 */
+      var hintDiv = document.createElement("div");
+      hintDiv.style.cssText = "font-size:13px;opacity:0.6;margin-bottom:12px;color:#000";
+      hintDiv.textContent = "（直接输入你想做的事，写完点击提交）";
+      optionsContainer.appendChild(hintDiv);
+
+      var inp = document.createElement("textarea");
+      inp.className = "q5-input";
+      inp.placeholder = "在这里写下你想和闺蜜一起做的事...";
+      optionsContainer.appendChild(inp);
+
+      var sub = document.createElement("button");
+      sub.className = "q5-submit";
+      sub.textContent = "提交 ✨";
+      sub.addEventListener("click", function() {
+        if (inp.value.trim()) {
+          showFeedback(Q5_SCORE, Q5_MESSAGE);
+        }
+      });
+      optionsContainer.appendChild(sub);
+    } else {
+      for (var i = 0; i < q.opts.length; i++) {
+        (function(opt, idx) {
+          var btn = document.createElement("button");
+          btn.className = "option";
+          btn.textContent = opt;
+          btn.addEventListener("click", function() { handleAnswer(btn, idx, q); });
+          optionsContainer.appendChild(btn);
+        })(q.opts[i], i);
+      }
+    }
+
+    requestAnimationFrame(function() {
+      quizCard.classList.add("enter");
+    });
+  }, 280);
+}
+
+/* ========== 答题逻辑 ========== */
+function handleAnswer(btn, idx, q) {
+  if (animating) return;
+  
+  // 从留言中提取分数，如 "+19：" 或 "+20："
+  var firstLine = q.messages && q.messages[idx] ? q.messages[idx][0] : "";
+  var scoreMatch = firstLine.match(/\+(\d+)/);
+  var earnedScore = scoreMatch ? parseInt(scoreMatch[1]) : 20;
+  
+  // 提取留言内容（去掉分数前缀）
+  var msgText = "";
+  if (q.messages && q.messages[idx]) {
+    msgText = q.messages[idx].map(function(m) {
+      return m.replace(/^\+\d+：\[/, '[').replace(/\]$/, ']');
+    }).join("\n");
+  }
+
+  // 高亮选中的选项
+  var btns = optionsContainer.querySelectorAll(".option");
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.remove("correct", "wrong");
+  }
+  btn.classList.add("correct");
+
+  // 记录当前选中项
+  lastSelectedScore = earnedScore;
+
+  // 显示反馈弹窗
+  showFeedback(earnedScore, msgText);
+  // 显示下一题箭头
+  nextBtn.classList.add("show");
+}
+
+/* ========== 反馈弹窗 ========== */
+function showFeedback(score, message) {
+  feedbackPoints.textContent = "+" + score + " 分";
+  feedbackMessage.textContent = message;
+  feedbackModal.classList.add("active");
+}
+
+feedbackClose.addEventListener("click", function() {
+  feedbackModal.classList.remove("active");
+  // 最后一题关闭后直接显示成功弹窗
+  if (currentQ >= QUESTIONS.length - 1) {
+    setTimeout(function() { showSuccess(); }, 300);
+  }
+});
+
+/* ========== 下一题箭头 ========== */
+nextBtn.addEventListener("click", function() {
+  // 添加当前选中选项的积分
+  if (lastSelectedScore > 0) {
+    scoreCents += lastSelectedScore * 10;
+    localStorage.setItem("birthday-score-cents", scoreCents);
+    updateScore();
+  }
+  currentQ++;
+  showQuestion();
+});
+
+/* ========== 闯关成功 ========== */
+function showSuccess() {
+  successModal.classList.add("active");
+  startConfetti();
+}
+
+/* ========== 星空 Canvas ========== */
+function startStarCanvas() {
+  var canvas = starCanvas;
+  var ctx = canvas.getContext("2d");
+  var stars = [], shootingStars = [];
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener("resize", resize);
+  for (var i = 0; i < 120; i++) {
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.6 + 0.3,
+      alpha: Math.random(),
+      speed: Math.random() * 0.02 + 0.005,
+      dir: Math.random() > 0.5 ? 1 : -1
+    });
+  }
+  function addShootingStar() {
+    if (Math.random() > 0.975) {
+      shootingStars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height * 0.4,
+        len: 50 + Math.random() * 70,
+        speed: 7 + Math.random() * 5,
+        alpha: 1,
+        angle: Math.PI / 4 + Math.random() * 0.3
+      });
+    }
+  }
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (var j = 0; j < stars.length; j++) {
+      var s = stars[j];
+      s.alpha += s.speed * s.dir;
+      if (s.alpha >= 1) { s.alpha = 1; s.dir = -1; }
+      if (s.alpha <= 0.1) { s.alpha = 0.1; s.dir = 1; }
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,230," + s.alpha + ")";
+      ctx.fill();
+    }
+    addShootingStar();
+    shootingStars = shootingStars.filter(function(ss) {
+      ss.x += Math.cos(ss.angle) * ss.speed;
+      ss.y += Math.sin(ss.angle) * ss.speed;
+      ss.alpha -= 0.02;
+      if (ss.alpha <= 0) return false;
+      ctx.beginPath();
+      ctx.moveTo(ss.x, ss.y);
+      ctx.lineTo(ss.x - Math.cos(ss.angle) * ss.len, ss.y - Math.sin(ss.angle) * ss.len);
+      var grad = ctx.createLinearGradient(ss.x, ss.y, ss.x - Math.cos(ss.angle) * ss.len, ss.y - Math.sin(ss.angle) * ss.len);
+      grad.addColorStop(0, "rgba(255,255,255," + ss.alpha + ")");
+      grad.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      return true;
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+/* ========== Confetti 彩花 ========== */
+function startConfetti() {
+  var c = confettiCanvas;
+  c.style.display = "block";
+  var ctx = c.getContext("2d");
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
+  var pieces = [];
+  var colors = ["#FFD700","#FF3B3B","#0047BB","#FF6B9D","#00B4D8","#9ACD32","#fff"];
+  for (var i = 0; i < 150; i++) {
+    pieces.push({
+      x: Math.random() * c.width,
+      y: Math.random() * c.height - c.height,
+      w: 6 + Math.random() * 8,
+      h: 4 + Math.random() * 6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      vy: 2 + Math.random() * 4,
+      vx: (Math.random() - 0.5) * 3,
+      rot: Math.random() * 360,
+      rotSpeed: (Math.random() - 0.5) * 10,
+      delay: Math.random() * 30
+    });
+  }
+  var frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    frame++;
+    var alive = false;
+    for (var i = 0; i < pieces.length; i++) {
+      var p = pieces[i];
+      if (frame < p.delay) { alive = true; continue; }
+      p.y += p.vy;
+      p.x += p.vx;
+      p.rot += p.rotSpeed;
+      p.vy += 0.05;
+      if (p.y > c.height + 20) continue;
+      alive = true;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot * Math.PI / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    if (alive && frame < 300) {
+      requestAnimationFrame(draw);
+    } else {
+      c.style.display = "none";
+    }
+  }
+  draw();
+}
+</script>
+</body>
+</html>
