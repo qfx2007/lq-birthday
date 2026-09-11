@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎂 闺蜜生日快乐！</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-start:#ffeef8;--bg-mid:#fff5f0;--bg-end:#f3e8ff;
+  --text:#1a1a1a;--card-bg:#fff;--card-border:#000;
+  --topbar-bg:#fff;--topbar-border:#000;
+  --shape1:#FFD700;--shape2:#FF3B3B;--shape3:#0047BB;
+  --shape4:#FF6B9D;--shape5:#00B4D8;
+  --modal-bg:#FFD700;--modal-border:#000;
+  --shadow-color:#000;
+}
+[data-theme="dark"]{
+  --bg-start:#1a0a2e;--bg-mid:#0d0518;--bg-end:#1a0a2e;
+  --text:#f0f0f0;--card-bg:rgba(30,20,50,0.9);--card-border:#fff;
+  --topbar-bg:#1a0a2e;--topbar-border:#fff;
+  --shape1:#FFD700;--shape2:#FF3B3B;--shape3:#4488FF;
+  --shape4:#FF6B9D;--shape5:#00B4D8;
+  --modal-bg:#2a1a4e;--modal-border:#FFD700;
+  --shadow-color:rgba(255,215,0,0.3);
+}
+body{
+  font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+  min-height:100vh;overflow-x:hidden;
+  background:linear-gradient(180deg,var(--bg-start) 0%,var(--bg-mid) 50%,var(--bg-end) 100%);
+  color:var(--text);transition:background 0.6s,color 0.3s;
+}
+[data-theme="dark"] body{background:linear-gradient(180deg,#0d0518 0%,#1a0a2e 60%,#0d0518 100%)}
+#starCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;display:none}
+[data-theme="dark"] #starCanvas{display:block}
+.top-bar{
+  position:fixed;top:0;left:0;right:0;height:60px;
+  background:var(--topbar-bg);border-bottom:3px solid var(--topbar-border);
+  display:flex;align-items:center;justify-content:flex-end;
+  padding:0 16px;z-index:100;transition:background 0.4s,border-color 0.4s;
+}
+.top-right{display:flex;align-items:center;gap:10px}
+.score-badge{
+  position:relative;background:#FFD700;border:3px solid #000;
+  border-radius:25px;padding:7px 14px 7px 32px;
+  font-weight:800;font-size:15px;color:#000;
+  box-shadow:3px 3px 0 #000;display:flex;align-items:center;gap:4px;
+}
+.score-badge::before{content:"⭐";position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:14px}
+.score-plus{
+  position:absolute;top:-7px;right:-7px;width:20px;height:20px;
+  background:#fff;border:2px solid #000;border-radius:50%;
+  font-size:14px;font-weight:bold;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:2px 2px 0 #000;transition:transform 0.2s;line-height:1;
+}
+.score-plus:hover{transform:scale(1.15) rotate(90deg)}
+.theme-btn{
+  width:42px;height:42px;background:#fff;border:3px solid #000;
+  border-radius:50%;font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:3px 3px 0 #000;transition:transform 0.2s,background 0.3s;
+}
+.theme-btn:hover{transform:scale(1.1) rotate(15deg)}
+[data-theme="dark"] .theme-btn{background:#2a1a4e;box-shadow:3px 3px 0 rgba(255,215,0,0.3)}
+.page-wrap{
+  max-width:560px;margin:0 auto;padding:80px 20px 60px;
+  display:flex;flex-direction:column;align-items:center;gap:28px;
+  position:relative;z-index:1;
+}
+.geo{position:fixed;pointer-events:none;z-index:0}
+.g1{top:80px;left:-20px;background:var(--shape1);width:70px;height:70px;border:4px solid #000;border-radius:50%}
+.g2{top:160px;right:-15px;background:var(--shape2);width:60px;height:60px;border:4px solid #000;transform:rotate(12deg);border-radius:12px}
+.g3{bottom:100px;left:10px;background:var(--shape3);width:50px;height:50px;border:4px solid #000;border-radius:50%}
+.g4{bottom:40px;right:20px;background:var(--shape4);width:60px;height:60px;border:4px solid #000;transform:rotate(-8deg);border-radius:12px}
+.hero-card{
+  background:var(--card-bg);border:4px solid var(--card-border);
+  border-radius:28px;padding:40px 32px;text-align:center;width:100%;
+  box-shadow:8px 8px 0 var(--shadow-color);
+  animation:fadeUp 0.6s ease;position:relative;overflow:hidden;
+  transition:background 0.4s,border-color 0.4s,box-shadow 0.4s;
+}
+.hero-card::before{
+  content:"";position:absolute;top:-30px;right:-30px;
+  width:100px;height:100px;background:var(--shape1);
+  border:3px solid #000;border-radius:50%;opacity:0.6;
+}
+.hero-card::after{
+  content:"";position:absolute;bottom:-20px;left:-20px;
+  width:70px;height:70px;background:var(--shape4);
+  border:3px solid #000;border-radius:12px;opacity:0.5;transform:rotate(15deg);
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.hero-card:hover{transform:translateY(-4px);box-shadow:12px 12px 0 var(--shadow-color)}
+.hero-emoji{font-size:4rem;margin-bottom:12px;display:block;animation:bounce 2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.hero-card h1{
+  font-size:2rem;font-weight:900;
+  background:linear-gradient(135deg,var(--shape2),var(--shape4),var(--shape3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:10px;position:relative;z-index:1;
+}
+.hero-card p{font-size:1rem;opacity:0.75;position:relative;z-index:1}
+.envlope-btn{
+  position:fixed;bottom:28px;right:28px;width:72px;height:72px;
+  background:linear-gradient(135deg,var(--shape1),var(--shape2));
+  border:4px solid #000;border-radius:20px;font-size:2rem;
+  cursor:pointer;box-shadow:6px 6px 0 #000;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.3s;animation:float 3s ease-in-out infinite;z-index:50;
+}
+.envlope-btn:hover{transform:translateY(-4px) scale(1.05);box-shadow:8px 8px 0 #000}
+.envlope-btn.read{opacity:0.7;animation:none}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+/* 弹窗基础 */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.55);
+  display:flex;align-items:center;justify-content:center;
+  z-index:200;opacity:0;visibility:hidden;transition:all 0.3s;
+}
+.modal-overlay.active{opacity:1;visibility:visible}
+.modal-box{
+  background:var(--modal-bg);border:4px solid var(--modal-border);
+  border-radius:24px;padding:32px;text-align:center;
+  box-shadow:10px 10px 0 var(--shadow-color);
+  max-width:360px;width:90%;
+  animation:popIn 0.35s ease;transition:background 0.4s,border-color 0.4s,box-shadow 0.4s;
+}
+@keyframes popIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
+.modal-box h2{font-size:1.5rem;font-weight:900;margin-bottom:12px}
+.modal-box p{font-size:0.95rem;line-height:1.7;margin-bottom:20px}
+.modal-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{
+  border:none;border-radius:14px;padding:12px 22px;
+  font-size:1rem;font-weight:700;cursor:pointer;
+  transition:all 0.2s;box-shadow:3px 3px 0 #000;font-family:inherit;
+}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:5px 5px 0 #000}
+.btn:active{transform:translate(0,0);box-shadow:1px 1px 0 #000}
+.btn-primary{background:#FF3B3B;color:#fff}
+.btn-secondary{background:#fff;color:#000;border:3px solid #000}
+[data-theme="dark"] .btn-secondary{background:#2a1a4e;color:#fff;border-color:#fff}
+/* 邮件弹窗：允许内部滚动，不撑开页面 */
+.email-modal .modal-box{
+  max-height:80vh;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:#000 transparent;
+}
+.email-content{
+  text-align:left;background:rgba(255,255,255,0.15);
+  border:2px solid #000;border-radius:16px;padding:16px;
+  margin-bottom:18px;font-size:0.9rem;line-height:1.8;
+  white-space:pre-wrap;
+}
+.particle{
+  position:fixed;pointer-events:none;z-index:0;
+  opacity:0.5;animation:floatParticle linear infinite;
+}
+@keyframes floatParticle{
+  0%{transform:translateY(110vh) rotate(0deg)}
+  100%{transform:translateY(-10vh) rotate(360deg)}
+}
+@media(max-width:480px){
+  .top-bar{height:54px;padding:0 12px}
+  .score-badge{padding:6px 10px 6px 28px;font-size:13px}
+  .score-plus{width:18px;height:18px;font-size:12px;top:-6px;right:-6px}
+  .theme-btn{width:38px;height:38px;font-size:16px}
+  .page-wrap{padding:72px 16px 50px}
+  .hero-card{padding:28px 20px;border-radius:22px}
+  .hero-card h1{font-size:1.6rem}
+  .hero-emoji{font-size:3rem}
+  .envlope-btn{width:62px;height:62px;font-size:1.7rem;border-radius:16px;bottom:20px;right:20px}
+  .modal-box{padding:24px;border-radius:20px}
+}
+</style>
+</head>
+<body><script>(function(){if(localStorage.getItem("birthday-theme")==="dark")document.documentElement.setAttribute("data-theme","dark");})();</script>
+<canvas id="starCanvas"></canvas>
+<div class="top-bar">
+  <div class="top-right">
+    <div class="score-badge" id="score-badge">
+      <span id="score-display">0</span>
+      <span class="score-plus" id="score-plus" title="去答题赚积分">+</span>
+    </div>
+    <button class="theme-btn" id="theme-toggle" title="切换主题">🌙</button>
+  </div>
+</div>
+<div class="page-wrap">
+  <div class="hero-card">
+    <span class="hero-emoji">🎂</span>
+    <h1>生日快乐，闺蜜！✨</h1>
+  </div>
+  <div class="geo g1"></div>
+  <div class="geo g2"></div>
+  <div class="geo g3"></div>
+  <div class="geo g4"></div>
+</div>
+<button class="envlope-btn" id="envlope-btn" title="查看生日邮件">💌</button>
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-box">
+    <h2>💌 查看生日邮件</h2>
+    <p>花费 <strong>0.1</strong> 积分查看生日专属祝福？</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancel-unlock">取消</button>
+      <button class="btn btn-primary" id="confirm-unlock">确认解锁</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="insufficient-modal">
+  <div class="modal-box">
+    <h2>😿 积分不足</h2>
+    <p>当前积分不足以解锁邮件哦～<br>要去答题赚积分吗？</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancel-insufficient">取消</button>
+      <button class="btn btn-primary" id="go-to-quiz">去答题 💪</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay email-modal" id="email-modal">
+  <div class="modal-box">
+    <h2>🎁 生日快乐！</h2>
+    <div class="email-content" id="email-content"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="close-email">收下祝福 💕</button>
+    </div>
+  </div>
+</div>
+<script>
+var BIRTHDAY_MESSAGE = "闺蜜闺蜜：\n\n生日快乐！🎂✨\n\n感觉人一辈子能交到一个可以交心的朋友真的真的很难得（我就不贪多！），友情和爱情都有点像我们自己主动选择的家人般的存在，所以我能感觉到我们俩个都在尽力地维护这段友谊。\n能和你互相认识一场真好，嘻嘻。\n\n因为感觉你工作很忙，如果给你写手写信的话，我都感觉你没有时间拆，但是呢我之前不是跟你讲以后有机会会每年你生日的时候都给你写一封、所以最后就打算以这种形式给闺蜜20岁生日写上这样一封比较简短的信。\n新的一岁，\n祝闺蜜工作顺利、事业有成。不过话又说说回来、这还是第一次给朋友祝福这种听起来有点老套的祝福，但是主要是感觉我闺蜜上班之后，不对也不对，感觉我自己上班之后深有体会、感觉这种祝福其实对打工人来说、是非常想实现的愿望哈。\n\n最后的最后，快让我闺蜜身边都遇到一些好人，老天快快保佑我闺蜜天天开心！ 💕\n\n—— 会陪着你长大的闺蜜q";
+var EMAIL_COST = 0.1;
+
+// 用整数分（×10）存积分，避免浮点误差
+var scoreCents = parseInt(localStorage.getItem("birthday-score-cents") || "0");
+function getCents() { return scoreCents; }
+function setCents(v) { scoreCents = v; localStorage.setItem("birthday-score-cents", v); }
+function getScore() { return Math.round(scoreCents) / 10; }
+
+var scoreDisplay = document.getElementById("score-display");
+var scorePlus = document.getElementById("score-plus");
+var themeToggle = document.getElementById("theme-toggle");
+var envlopeBtn = document.getElementById("envlope-btn");
+var confirmModal = document.getElementById("confirm-modal");
+var insufficientModal = document.getElementById("insufficient-modal");
+var emailModal = document.getElementById("email-modal");
+var emailContent = document.getElementById("email-content");
+
+updateScore();
+initTheme();
+createParticles();
+startStarCanvas();
+
+function updateScore() {
+  scoreDisplay.textContent = getScore();
+}
+
+function initTheme() {
+  var s = localStorage.getItem("birthday-theme");
+  if (s === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+    themeToggle.textContent = "☀️";
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+    themeToggle.textContent = "🌙";
+  }
+}
+
+themeToggle.addEventListener("click", function() {
+  var isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  if (isDark) {
+    document.documentElement.removeAttribute("data-theme");
+    themeToggle.textContent = "🌙";
+    localStorage.setItem("birthday-theme", "light");
+  } else {
+    document.documentElement.setAttribute("data-theme", "dark");
+    themeToggle.textContent = "☀️";
+    localStorage.setItem("birthday-theme", "dark");
+  }
+});
+
+function createParticles() {
+  var emojis = ["💖","⭐","🌸","✨","💕","🎀"];
+  for (var i = 0; i < 12; i++) {
+    var p = document.createElement("div");
+    p.className = "particle";
+    p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    var left = Math.random() * 90;
+    var size = 14 + Math.random() * 16;
+    var dur = 8 + Math.random() * 12;
+    var delay = Math.random() * 10;
+    var opacity = 0.2 + Math.random() * 0.4;
+    p.style.cssText = "left:" + left + "%;font-size:" + size + "px;animation-duration:" + dur + "s;animation-delay:" + delay + "s;opacity:" + opacity + ";";
+    document.body.appendChild(p);
+  }
+}
+
+function startStarCanvas() {
+  var canvas = document.getElementById("starCanvas");
+  var ctx = canvas.getContext("2d");
+  var stars = [];
+  var shootingStars = [];
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener("resize", resize);
+  for (var i = 0; i < 150; i++) {
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.8 + 0.3,
+      alpha: Math.random(),
+      speed: Math.random() * 0.02 + 0.005,
+      dir: Math.random() > 0.5 ? 1 : -1
+    });
+  }
+  function addShootingStar() {
+    if (Math.random() > 0.97) {
+      shootingStars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height * 0.5,
+        len: 60 + Math.random() * 80,
+        speed: 8 + Math.random() * 6,
+        alpha: 1,
+        angle: Math.PI / 4 + Math.random() * 0.3
+      });
+    }
+  }
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (var j = 0; j < stars.length; j++) {
+      var s = stars[j];
+      s.alpha += s.speed * s.dir;
+      if (s.alpha >= 1) { s.alpha = 1; s.dir = -1; }
+      if (s.alpha <= 0.1) { s.alpha = 0.1; s.dir = 1; }
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,230," + s.alpha + ")";
+      ctx.fill();
+    }
+    addShootingStar();
+    shootingStars = shootingStars.filter(function(ss) {
+      ss.x += Math.cos(ss.angle) * ss.speed;
+      ss.y += Math.sin(ss.angle) * ss.speed;
+      ss.alpha -= 0.02;
+      if (ss.alpha <= 0) return false;
+      ctx.beginPath();
+      ctx.moveTo(ss.x, ss.y);
+      ctx.lineTo(ss.x - Math.cos(ss.angle) * ss.len, ss.y - Math.sin(ss.angle) * ss.len);
+      var grad = ctx.createLinearGradient(ss.x, ss.y, ss.x - Math.cos(ss.angle) * ss.len, ss.y - Math.sin(ss.angle) * ss.len);
+      grad.addColorStop(0, "rgba(255,255,255," + ss.alpha + ")");
+      grad.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      return true;
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// 加号 → 跳转答题
+scorePlus.addEventListener("click", function() {
+  window.location.href = "quiz.html";
+});
+
+// 信封点击
+envlopeBtn.addEventListener("click", function() {
+  if (getCents() < 1) {
+    insufficientModal.classList.add("active");
+  } else {
+    confirmModal.classList.add("active");
+  }
+});
+
+// 确认解锁
+document.getElementById("confirm-unlock").addEventListener("click", function() {
+  confirmModal.classList.remove("active");
+  if (getCents() < 1) {
+    insufficientModal.classList.add("active");
+    return;
+  }
+  setCents(getCents() - 1);
+  updateScore();
+  emailContent.textContent = BIRTHDAY_MESSAGE;
+  emailModal.classList.add("active");
+});
+
+document.getElementById("cancel-unlock").addEventListener("click", function() {
+  confirmModal.classList.remove("active");
+});
+
+// 积分不足弹窗
+document.getElementById("go-to-quiz").addEventListener("click", function() {
+  insufficientModal.classList.remove("active");
+  window.location.href = "quiz.html";
+});
+document.getElementById("cancel-insufficient").addEventListener("click", function() {
+  insufficientModal.classList.remove("active");
+});
+document.getElementById("close-email").addEventListener("click", function() {
+  emailModal.classList.remove("active");
+});
+</script>
+</body>
+</html>
+
+
